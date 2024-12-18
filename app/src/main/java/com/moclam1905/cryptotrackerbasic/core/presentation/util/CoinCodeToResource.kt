@@ -1,4 +1,4 @@
-package com.moclam1905.cryptotrackerbasic.util
+package com.moclam1905.cryptotrackerbasic.core.presentation.util
 
 import com.moclam1905.cryptotrackerbasic.R
 
