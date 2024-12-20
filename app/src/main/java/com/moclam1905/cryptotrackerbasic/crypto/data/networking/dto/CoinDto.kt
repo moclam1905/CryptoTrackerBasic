@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CoinDto(
-    val id: Int,
+    val id: String,
     val rank: Int,
     val name: String,
     val symbol: String,

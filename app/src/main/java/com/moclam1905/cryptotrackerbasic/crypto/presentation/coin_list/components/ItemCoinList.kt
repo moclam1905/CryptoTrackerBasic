@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,7 +100,7 @@ fun ItemCoinListPreview(modifier: Modifier = Modifier) {
 }
 
 internal val coin = Coin(
-    id = 1,
+    id = 1.toString(),
     rank = 1,
     name = "Bitcoin",
     symbol = "BTC",
