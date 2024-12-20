@@ -20,8 +20,9 @@ import com.moclam1905.cryptotrackerbasic.ui.theme.CryptoTrackerBasicTheme
 @Composable
 fun CoinListScreen(
     modifier: Modifier = Modifier,
-    state: CoinListState
+    state: CoinListState,
 ) {
+
     if (state.isLoading) {
         Box(
             modifier = modifier.fillMaxSize(),
@@ -55,9 +56,10 @@ fun CoinListScreenPreview(modifier: Modifier = Modifier) {
     CryptoTrackerBasicTheme {
         CoinListScreen(
             state = CoinListState(
-            isLoading = false,
-            coins = (1..10).map {
-                coin.toCoinUi().copy(id = it.toString()) }
+                isLoading = false,
+                coins = (1..10).map {
+                    coin.toCoinUi().copy(id = it.toString())
+                }
             ),
             modifier = modifier.background(MaterialTheme.colorScheme.background))
     }
