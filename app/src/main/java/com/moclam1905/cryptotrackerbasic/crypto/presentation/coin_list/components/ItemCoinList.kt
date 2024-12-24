@@ -89,7 +89,7 @@ fun ItemCoinList(
 fun ItemCoinListPreview(modifier: Modifier = Modifier) {
     CryptoTrackerBasicTheme {
         ItemCoinList(
-            coinUi = coin.toCoinUi(),
+            coinUi = coin,
             onItemClick = {},
             modifier = Modifier.background(
                 MaterialTheme.colorScheme.primaryContainer
@@ -107,4 +107,4 @@ internal val coin = Coin(
     marketCapUsd = 31423333.54,
     priceUsd = 121233212.11,
     changePercent24Hr = -12.12
-)
+).toCoinUi()
