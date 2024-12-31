@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.moclam1905.cryptotrackerbasic.core.domain.util.onError
 import com.moclam1905.cryptotrackerbasic.core.domain.util.onSuccess
 import com.moclam1905.cryptotrackerbasic.crypto.domain.CoinDataSource
+import com.moclam1905.cryptotrackerbasic.crypto.presentation.models.CoinUi
 import com.moclam1905.cryptotrackerbasic.crypto.presentation.models.toCoinUi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
 
 class CoinListViewModel(
     private val coinDataSource: CoinDataSource
@@ -34,13 +36,29 @@ class CoinListViewModel(
     fun onAction(action: CoinListAction) {
         when (action) {
             is CoinListAction.OnCoinClick -> {
-                _state.update {
-                    it.copy(selectedCoin = action.coinUi)
-                }
+                selectedCoin(action.coinUi)
             }
 
             is CoinListAction.OnRefresh -> {
                 //loadCoins()
+            }
+        }
+    }
+
+    private fun selectedCoin(coinUi: CoinUi) {
+        _state.update {
+            it.copy(selectedCoin = coinUi)
+        }
+
+        viewModelScope.launch {
+            coinDataSource.getCoinById(
+                coinId = coinUi.id,
+                startTime = ZonedDateTime.now().minusDays(5),
+                endTime = ZonedDateTime.now()
+            ).onSuccess {
+
+            }.onError { err ->
+                _events.send(CoinListEvent.Error(err))
             }
         }
     }
