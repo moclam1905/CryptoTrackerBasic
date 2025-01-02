@@ -34,6 +34,9 @@ Here are the key takeaways from my experience:
 
 
 ## Demo
-![Giao diện chính của ứng dụng](Screen_recording_20250102_184800.webm)
+<img src="Screenshot_20250102_185959.png" alt="" width="200"/>
+<img src="Screenshot_20250102_190017.png" alt="" width="400"/>
+<img src="Screenshot_20250102_190043.png" alt="" width="200"/>
+
 
 
