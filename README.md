@@ -34,6 +34,6 @@ Here are the key takeaways from my experience:
 
 
 ## Demo
-
+![Giao diện chính của ứng dụng](Screen_recording_20250102_184800.webm)
 
 
