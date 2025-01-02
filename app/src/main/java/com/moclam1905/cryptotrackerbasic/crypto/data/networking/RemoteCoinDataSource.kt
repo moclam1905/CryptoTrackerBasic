@@ -44,7 +44,7 @@ class RemoteCoinDataSource(
                     "/assets/$coinId/history"
                 )
             ) {
-                parameter("interval", "h4")
+                parameter("interval", "h6")
                 parameter("start", startMillis)
                 parameter("end", endMillis)
             }

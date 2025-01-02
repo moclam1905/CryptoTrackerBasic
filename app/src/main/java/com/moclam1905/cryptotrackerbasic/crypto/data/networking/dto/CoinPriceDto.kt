@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CoinPriceDto(
     val priceUsd: Double,
-    val dateTime: Long
+    val time: Long
 )
