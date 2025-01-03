@@ -16,7 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -37,117 +37,112 @@ import kotlin.random.Random
 
 @Composable
 fun LineChart(
-    modifier: Modifier = Modifier,
     dataPoints: List<DataPoint>,
-    chartStyle: ChartStyle,
-    visibleDataPointIndices: IntRange,
+    style: ChartStyle,
+    visibleDataPointsIndices: IntRange,
     unit: String,
+    modifier: Modifier = Modifier,
     selectedDataPoint: DataPoint? = null,
     onSelectedDataPoint: (DataPoint) -> Unit = {},
     onXLabelWidthChange: (Float) -> Unit = {},
-    showHelperLine: Boolean = true,
+    showHelperLines: Boolean = true
 ) {
     val textStyle = LocalTextStyle.current.copy(
-        fontSize = chartStyle.labelFontSize
+        fontSize = style.labelFontSize
     )
 
-    val visibleDataPoints = remember(dataPoints, visibleDataPointIndices) {
-        dataPoints.slice(visibleDataPointIndices)
+    val visibleDataPoints = remember(dataPoints, visibleDataPointsIndices) {
+        dataPoints.slice(visibleDataPointsIndices)
     }
 
     val maxYValue = remember(visibleDataPoints) {
         visibleDataPoints.maxOfOrNull { it.y } ?: 0f
     }
-
     val minYValue = remember(visibleDataPoints) {
         visibleDataPoints.minOfOrNull { it.y } ?: 0f
     }
 
     val measurer = rememberTextMeasurer()
+
     var xLabelWidth by remember {
         mutableFloatStateOf(0f)
-
     }
     LaunchedEffect(key1 = xLabelWidth) {
         onXLabelWidthChange(xLabelWidth)
     }
 
     val selectedDataPointIndex = remember(selectedDataPoint) {
-        selectedDataPoint?.let { dataPoints.indexOf(it) }
+        dataPoints.indexOf(selectedDataPoint)
     }
-
-    var drawPoint by remember {
+    var drawPoints by remember {
         mutableStateOf(listOf<DataPoint>())
     }
-
     var isShowingDataPoints by remember {
-        mutableStateOf(
-            selectedDataPoint != null
-        )
+        mutableStateOf(selectedDataPoint != null)
     }
 
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(dataPoints, xLabelWidth) {
+            .pointerInput(drawPoints, xLabelWidth) {
                 detectHorizontalDragGestures { change, _ ->
                     val newSelectedDataPointIndex = getSelectedDataPointIndex(
                         touchOffsetX = change.position.x,
-                        triggerWith = xLabelWidth,
-                        drawPoints = drawPoint
+                        triggerWidth = xLabelWidth,
+                        drawPoints = drawPoints
                     )
-
                     isShowingDataPoints =
-                        (newSelectedDataPointIndex + visibleDataPointIndices.first) in visibleDataPointIndices
-
+                        (newSelectedDataPointIndex + visibleDataPointsIndices.first) in
+                                visibleDataPointsIndices
                     if (isShowingDataPoints) {
                         onSelectedDataPoint(dataPoints[newSelectedDataPointIndex])
                     }
                 }
             }
     ) {
+        val minLabelSpacingYPx = style.minYLabelSpacing.toPx()
+        val verticalPaddingPx = style.verticalPadding.toPx()
+        val horizontalPaddingPx = style.horizontalPadding.toPx()
+        val xAxisLabelSpacingPx = style.xAxisLabelSpacing.toPx()
 
-        val minLabelSpacingYPx = chartStyle.minYLabelSpacing.toPx()
-        val verticalPaddingPx = chartStyle.verticalPadding.toPx()
-        val horizontalPaddingPx = chartStyle.horizontalPadding.toPx()
-        val xAxisLabelSpacingPx = chartStyle.xAxisLabelSpacing.toPx()
-
-        val xLabelTextLayoutResult = visibleDataPoints.map {
+        val xLabelTextLayoutResults = visibleDataPoints.map {
             measurer.measure(
                 text = it.xLabel,
                 style = textStyle.copy(textAlign = TextAlign.Center)
             )
         }
+        val maxXLabelWidth = xLabelTextLayoutResults.maxOfOrNull { it.size.width } ?: 0
+        val maxXLabelHeight = xLabelTextLayoutResults.maxOfOrNull { it.size.height } ?: 0
+        val maxXLabelLineCount = xLabelTextLayoutResults.maxOfOrNull { it.lineCount } ?: 0
+        val xLabelLineHeight = if (maxXLabelLineCount > 0) {
+            maxXLabelHeight / maxXLabelLineCount
+        } else 0
 
-        val maxXLabelWidth = xLabelTextLayoutResult.maxOfOrNull { it.size.width } ?: 0
-        val maxXLabelHeight = xLabelTextLayoutResult.maxOfOrNull { it.size.height } ?: 0
-        val maxXLabelLineCount = xLabelTextLayoutResult.maxOfOrNull { it.lineCount } ?: 0
-        val xLabelLineHeight =
-            if (maxXLabelLineCount > 0) maxXLabelHeight / maxXLabelLineCount else 0
+        val viewPortHeightPx = size.height -
+                (maxXLabelHeight + 2 * verticalPaddingPx
+                        + xLabelLineHeight + xAxisLabelSpacingPx)
 
-        val viewPortHeightPx =
-            size.height - (maxXLabelHeight + 2 * verticalPaddingPx + xLabelLineHeight + xAxisLabelSpacingPx)
-
-
-        // Y Labels calculation
+        // Y-LABEL CALCULATION
         val labelViewPortHeightPx = viewPortHeightPx + xLabelLineHeight
         val labelCountExcludingLastLabel =
-            (labelViewPortHeightPx / (xLabelLineHeight + minLabelSpacingYPx)).toInt()
+            ((labelViewPortHeightPx / (xLabelLineHeight + minLabelSpacingYPx))).toInt()
+
         val valueIncrement = (maxYValue - minYValue) / labelCountExcludingLastLabel
+
         val yLabels = (0..labelCountExcludingLastLabel).map {
             ValueLabel(
                 value = maxYValue - (valueIncrement * it),
-                unit = unit,
-            )
-        }
-        val yLabelTextLayoutResult = yLabels.map {
-            measurer.measure(
-                text = it.formattedValue(),
-                style = textStyle
+                unit = unit
             )
         }
 
-        val maxYLabelWidth = yLabelTextLayoutResult.maxOfOrNull { it.size.width } ?: 0
+        val yLabelTextLayoutResults = yLabels.map {
+            measurer.measure(
+                text = it.formatted(),
+                style = textStyle
+            )
+        }
+        val maxYLabelWidth = yLabelTextLayoutResults.maxOfOrNull { it.size.width } ?: 0
 
         val viewPortTopY = verticalPaddingPx + xLabelLineHeight + 10f
         val viewPortRightX = size.width
@@ -155,32 +150,39 @@ fun LineChart(
         val viewPortLeftX = 2f * horizontalPaddingPx + maxYLabelWidth
 
         xLabelWidth = maxXLabelWidth + xAxisLabelSpacingPx
-        xLabelTextLayoutResult.forEachIndexed { index, textLayoutResult ->
-            val x = viewPortLeftX + xAxisLabelSpacingPx / 2f + xLabelWidth * index
-            val color =
-                if (index == selectedDataPointIndex) chartStyle.selectedColor else chartStyle.unselectedColor
+        xLabelTextLayoutResults.forEachIndexed { index, result ->
+            val x = viewPortLeftX + xAxisLabelSpacingPx / 2f +
+                    xLabelWidth * index
+
+            val xPos = viewPortLeftX + (index * xLabelWidth) + (xLabelWidth / 2f)
+
             drawText(
-                textLayoutResult = textLayoutResult,
+                textLayoutResult = result,
                 topLeft = Offset(
-                    x = x,
+                    x = xPos - result.size.width / 2f,//x,
                     y = viewPortBottomY + xAxisLabelSpacingPx
                 ),
-                color = color
+                color = if (index == selectedDataPointIndex) {
+                    style.selectedColor
+                } else style.unselectedColor
             )
 
-            if (showHelperLine) {
+            if (showHelperLines) {
                 drawLine(
-                    color = color,
+                    color = if (selectedDataPointIndex == index) {
+                        style.selectedColor
+                    } else style.unselectedColor,
                     start = Offset(
-                        x = x + textLayoutResult.size.width.toFloat() / 2f,
-                        y = viewPortTopY
-                    ),
-                    end = Offset(
-                        x = x + textLayoutResult.size.width.toFloat() / 2f,
+                        x = xPos,//x + result.size.width / 2f
                         y = viewPortBottomY
                     ),
-                    strokeWidth = if (index == selectedDataPointIndex)
-                        chartStyle.helperLineThicknessPx * 2f else chartStyle.helperLineThicknessPx
+                    end = Offset(
+                        x = xPos, //x + result.size.width / 2f
+                        y = viewPortTopY
+                    ),
+                    strokeWidth = if (selectedDataPointIndex == index) {
+                        style.helperLinesThicknessPx * 1.8f
+                    } else style.helperLinesThicknessPx
                 )
             }
 
@@ -189,24 +191,20 @@ fun LineChart(
                     value = visibleDataPoints[index].y,
                     unit = unit
                 )
-
                 val valueResult = measurer.measure(
-                    text = valueLabel.formattedValue(),
+                    text = valueLabel.formatted(),
                     style = textStyle.copy(
-                        color = chartStyle.selectedColor
+                        color = style.selectedColor
                     ),
                     maxLines = 1
                 )
-
-                val textPositionX = if (selectedDataPointIndex == visibleDataPointIndices.last) {
-                    x - valueResult.size.width
+                val textPositionX = if (selectedDataPointIndex == visibleDataPointsIndices.last) {
+                    xPos - valueResult.size.width
                 } else {
-                    x - valueResult.size.width / 2f
-                } + textLayoutResult.size.width / 2f
-
+                    xPos - valueResult.size.width / 2f
+                }
                 val isTextInVisibleRange =
                     (size.width - textPositionX).roundToInt() in 0..size.width.roundToInt()
-
                 if (isTextInVisibleRange) {
                     drawText(
                         textLayoutResult = valueResult,
@@ -219,46 +217,52 @@ fun LineChart(
             }
         }
 
-        val heightRequiredForLabels = xLabelLineHeight * (labelCountExcludingLastLabel + 1)
-        val remainingHeight = labelViewPortHeightPx - heightRequiredForLabels
-        val betweenLabelSpacing = remainingHeight / labelCountExcludingLastLabel
+        val heightRequiredForLabels = xLabelLineHeight *
+                (labelCountExcludingLastLabel + 1)
+        val remainingHeightForLabels = labelViewPortHeightPx - heightRequiredForLabels
+        val spaceBetweenLabels = remainingHeightForLabels / labelCountExcludingLastLabel
 
-        yLabelTextLayoutResult.forEachIndexed { index, textLayoutResult ->
-            val x = horizontalPaddingPx + maxYLabelWidth - textLayoutResult.size.width.toFloat()
-            val y =
-                viewPortTopY + index * (xLabelLineHeight + betweenLabelSpacing) - xLabelLineHeight / 2
+        yLabelTextLayoutResults.forEachIndexed { index, result ->
+            val x = horizontalPaddingPx + maxYLabelWidth - result.size.width.toFloat()
+            val y = viewPortTopY +
+                    index * (xLabelLineHeight + spaceBetweenLabels) -
+                    xLabelLineHeight / 2f
             drawText(
-                textLayoutResult = textLayoutResult,
+                textLayoutResult = result,
                 topLeft = Offset(
                     x = x,
                     y = y
                 ),
-                color = chartStyle.unselectedColor
+                color = style.unselectedColor
             )
 
-            if (showHelperLine) {
+            if (showHelperLines) {
                 drawLine(
-                    color = chartStyle.unselectedColor,
+                    color = style.unselectedColor,
                     start = Offset(
                         x = viewPortLeftX,
-                        y = y + textLayoutResult.size.height.toFloat() / 2f
+                        y = y + result.size.height.toFloat() / 2f
                     ),
                     end = Offset(
                         x = viewPortRightX,
-                        y = y + textLayoutResult.size.height.toFloat() / 2f
+                        y = y + result.size.height.toFloat() / 2f
                     ),
-                    strokeWidth = chartStyle.helperLineThicknessPx
+                    strokeWidth = style.helperLinesThicknessPx
                 )
             }
         }
 
-        drawPoint = visibleDataPointIndices.map {
-            val x =
-                viewPortLeftX + (it - visibleDataPointIndices.first) * xLabelWidth + xLabelWidth / 2f
+        // visibleDataPointsIndices = 5..20
+        drawPoints = visibleDataPointsIndices.map {
+            val x = viewPortLeftX + (it - visibleDataPointsIndices.first) *
+                    xLabelWidth + xLabelWidth / 2f
+            val xPos = viewPortLeftX + (it - visibleDataPointsIndices.first) * xLabelWidth +
+                    (xLabelWidth / 2f)
+            // [minYValue; maxYValue] -> [0; 1]
             val ratio = (dataPoints[it].y - minYValue) / (maxYValue - minYValue)
-            val y = viewPortBottomY - ratio * viewPortHeightPx
+            val y = viewPortBottomY - (ratio * viewPortHeightPx)
             DataPoint(
-                x = x,
+                x = xPos,//x
                 y = y,
                 xLabel = dataPoints[it].xLabel
             )
@@ -266,10 +270,10 @@ fun LineChart(
 
         val conPoints1 = mutableListOf<DataPoint>()
         val conPoints2 = mutableListOf<DataPoint>()
+        for (i in 1 until drawPoints.size) {
+            val p0 = drawPoints[i - 1]
+            val p1 = drawPoints[i]
 
-        for (i in 1..<drawPoint.size) {
-            val p0 = drawPoint[i - 1]
-            val p1 = drawPoint[i]
             val x = (p1.x + p0.x) / 2f
             val y1 = p0.y
             val y2 = p1.y
@@ -279,55 +283,97 @@ fun LineChart(
         }
 
         val linePath = Path().apply {
-            if (drawPoint.isNotEmpty()) {
-                moveTo(drawPoint.first().x, drawPoint.first().y)
+            if (drawPoints.isNotEmpty()) {
+                moveTo(drawPoints.first().x, drawPoints.first().y)
 
-                for (i in 1 until drawPoint.size) {
+                for (i in 1 until drawPoints.size) {
                     cubicTo(
                         x1 = conPoints1[i - 1].x,
                         y1 = conPoints1[i - 1].y,
                         x2 = conPoints2[i - 1].x,
                         y2 = conPoints2[i - 1].y,
-                        x3 = drawPoint[i].x,
-                        y3 = drawPoint[i].y
+                        x3 = drawPoints[i].x,
+                        y3 = drawPoints[i].y
                     )
                 }
             }
         }
 
+        val fillPath = Path().apply {
+            if (drawPoints.isNotEmpty()) {
+                moveTo(drawPoints.first().x, drawPoints.first().y)
+                for (i in 1 until drawPoints.size) {
+                    cubicTo(
+                        x1 = conPoints1[i - 1].x,
+                        y1 = conPoints1[i - 1].y,
+                        x2 = conPoints2[i - 1].x,
+                        y2 = conPoints2[i - 1].y,
+                        x3 = drawPoints[i].x,
+                        y3 = drawPoints[i].y
+                    )
+                }
+                lineTo(drawPoints.last().x, viewPortBottomY)
+                lineTo(drawPoints.first().x, viewPortBottomY)
+
+                close()
+            }
+        }
+        val areaBrush = Brush.verticalGradient(
+            colors = listOf(
+                Color(0xFF007AFF),
+                Color(0x00007AFF)
+            ),
+            startY = viewPortTopY,
+            endY = viewPortBottomY
+        )
+
+        drawPath(
+            path = fillPath,
+            brush = areaBrush
+        )
         drawPath(
             path = linePath,
-            color = chartStyle.chartLineColor,
+            color = style.chartLineColor,
             style = Stroke(
                 width = 5f,
                 cap = StrokeCap.Round
             )
         )
 
-        drawPoint.forEachIndexed { index, point ->
+        drawPath(
+            path = linePath,
+            color = style.chartLineColor,
+            style = Stroke(
+                width = 5f,
+                cap = StrokeCap.Round
+            )
+        )
+
+        drawPoints.forEachIndexed { index, point ->
             if (isShowingDataPoints) {
                 val circleOffset = Offset(
                     x = point.x,
                     y = point.y
                 )
                 drawCircle(
-                    color = chartStyle.selectedColor,
-                    center = circleOffset,
-                    radius = 10f
+                    color = style.selectedColor,
+                    radius = 10f,
+                    center = circleOffset
                 )
 
                 if (selectedDataPointIndex == index) {
                     drawCircle(
                         color = Color.White,
-                        center = circleOffset,
-                        radius = 16f
+                        radius = 15f,
+                        center = circleOffset
                     )
-
                     drawCircle(
-                        color = chartStyle.selectedColor,
+                        color = style.selectedColor,
+                        radius = 15f,
                         center = circleOffset,
-                        radius = 16f,
-                        style = Stroke(width = 3f)
+                        style = Stroke(
+                            width = 3f
+                        )
                     )
                 }
             }
@@ -337,20 +383,18 @@ fun LineChart(
 
 private fun getSelectedDataPointIndex(
     touchOffsetX: Float,
-    triggerWith: Float,
+    triggerWidth: Float,
     drawPoints: List<DataPoint>
 ): Int {
-    val triggerRangeLeft = touchOffsetX - triggerWith / 2f
-    val triggerRangeRight = touchOffsetX + triggerWith / 2f
-
+    val triggerRangeLeft = touchOffsetX - triggerWidth / 2f
+    val triggerRangeRight = touchOffsetX + triggerWidth / 2f
     return drawPoints.indexOfFirst {
         it.x in triggerRangeLeft..triggerRangeRight
     }
-
-
 }
 
-@Preview
+
+@Preview(widthDp = 1000)
 @Composable
 private fun LineChartPreview() {
     CryptoTrackerBasicTheme {
@@ -362,36 +406,34 @@ private fun LineChartPreview() {
                 )
             }
         }
-
         val style = ChartStyle(
             chartLineColor = Color.Black,
-            unselectedColor = Color.Gray,
+            unselectedColor = Color(0xFF7C7C7C),
             selectedColor = Color.Black,
-            helperLineThicknessPx = 1f,
-            axisLineThicknessPx = 5f,
+            helperLinesThicknessPx = 1f,
+            axisLinesThicknessPx = 5f,
             labelFontSize = 14.sp,
-            minYLabelSpacing = 20.dp,
+            minYLabelSpacing = 25.dp,
             verticalPadding = 8.dp,
             horizontalPadding = 8.dp,
             xAxisLabelSpacing = 8.dp
         )
-
         val dataPoints = remember {
             coinHistoryRandomized.map {
                 DataPoint(
                     x = it.dateTime.hour.toFloat(),
                     y = it.priceUsd.toFloat(),
-                    xLabel = DateTimeFormatter.ofPattern("ha\nm/d").format(it.dateTime)
+                    xLabel = DateTimeFormatter
+                        .ofPattern("ha\nM/d")
+                        .format(it.dateTime)
                 )
             }
         }
-
         LineChart(
             dataPoints = dataPoints,
-            chartStyle = style,
-            visibleDataPointIndices = dataPoints.indices,
+            style = style,
+            visibleDataPointsIndices = 0..19,
             unit = "$",
-            showHelperLine = true,
             modifier = Modifier
                 .width(700.dp)
                 .height(300.dp)
@@ -399,5 +441,4 @@ private fun LineChartPreview() {
             selectedDataPoint = dataPoints[1]
         )
     }
-
 }

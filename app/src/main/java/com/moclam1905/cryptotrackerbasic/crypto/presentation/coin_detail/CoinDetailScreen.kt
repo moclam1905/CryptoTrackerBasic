@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.FlowRowOverflow
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,7 +34,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -155,21 +153,21 @@ fun CoinDetailScreen(modifier: Modifier = Modifier, state: CoinListState) {
                     (coin.coinPriceHistory.lastIndex - amountOfVisibleDataPoints).coerceAtLeast(0)
                 LineChart(
                     dataPoints = coin.coinPriceHistory,
-                    chartStyle = ChartStyle(
+                    style = ChartStyle(
                         chartLineColor = MaterialTheme.colorScheme.primary,
                         unselectedColor = MaterialTheme.colorScheme.secondary.copy(
-                            alpha = 0.4f
+                            alpha = 0.3f
                         ),
                         selectedColor = MaterialTheme.colorScheme.primary,
-                        helperLineThicknessPx = 5f,
-                        axisLineThicknessPx = 5f,
+                        helperLinesThicknessPx = 5f,
+                        axisLinesThicknessPx = 5f,
                         labelFontSize = 14.sp,
                         minYLabelSpacing = 25.dp,
                         verticalPadding = 8.dp,
                         horizontalPadding = 8.dp,
                         xAxisLabelSpacing = 8.dp
                     ),
-                    visibleDataPointIndices = startIndex..coin.coinPriceHistory.lastIndex,
+                    visibleDataPointsIndices = startIndex..coin.coinPriceHistory.lastIndex,
                     unit = "$",
                     modifier = Modifier
                         .fillMaxWidth()
