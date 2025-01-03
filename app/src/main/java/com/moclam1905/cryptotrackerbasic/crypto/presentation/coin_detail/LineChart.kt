@@ -1,5 +1,7 @@
 package com.moclam1905.cryptotrackerbasic.crypto.presentation.coin_detail
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -80,6 +82,13 @@ fun LineChart(
     var isShowingDataPoints by remember {
         mutableStateOf(selectedDataPoint != null)
     }
+
+    // 1) Tạo animation progress từ 0 -> 1
+    //    duration = 1500ms (1.5s) tuỳ ý bạn
+    val animationProgress by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 1500)
+    )
 
     Canvas(
         modifier = modifier
@@ -182,7 +191,7 @@ fun LineChart(
                     ),
                     strokeWidth = if (selectedDataPointIndex == index) {
                         style.helperLinesThicknessPx * 1.8f
-                    } else style.helperLinesThicknessPx
+                    } else 0f
                 )
             }
 
